@@ -16,7 +16,15 @@ def _headers() -> dict:
 
 
 async def insert_receipt(payload: SupabaseReceiptPayload) -> dict:
-    data = payload.model_dump(mode="json")
+    """Map parsed receipt to real Supabase schema columns."""
+    data = {
+        "user_id": payload.user_id,
+        "merchant": payload.merchant_name or "Scontrino",
+        "total": float(payload.total_amount) if payload.total_amount else 0.0,
+        "date": str(payload.date) if payload.date else None,
+        "payment": payload.deduction_category or None,
+    }
+    # Remove None values
     data = {k: v for k, v in data.items() if v is not None}
 
     async with httpx.AsyncClient(timeout=15) as client:
