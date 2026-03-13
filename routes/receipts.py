@@ -1,8 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Header
 from typing import Optional
 
-router = APIRouter()
-
 from models.schemas import (
     ManualReceiptInput, EmailReceiptInput,
     ReceiptWithDeduction, SupabaseReceiptPayload,
@@ -39,19 +37,15 @@ async def upload_image(
 ):
     if not file.content_type.startswith("image/"):
         raise HTTPException(400, "File must be an image (JPEG or PNG)")
-
     image_bytes = await file.read()
     if len(image_bytes) > 10 * 1024 * 1024:
         raise HTTPException(413, "Image too large (max 10MB)")
-
     try:
         receipt = await ocr.process_image(image_bytes)
     except Exception as e:
         raise HTTPException(500, f"OCR failed: {e}")
-
     deduction = analyze_receipt(receipt)
     result = ReceiptWithDeduction(receipt=receipt, deduction=deduction)
-
     if save_to_db:
         try:
             payload = _build_payload(user_id, receipt, deduction)
@@ -61,7 +55,6 @@ async def upload_image(
                 await insert_receipt_items(db_row["id"], items_data)
         except Exception as e:
             print(f"[WARN] DB write failed: {e}")
-
     return result
 
 
@@ -73,19 +66,15 @@ async def upload_pdf(
 ):
     if file.content_type not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(400, "File must be a PDF")
-
     pdf_bytes = await file.read()
     if len(pdf_bytes) > 20 * 1024 * 1024:
         raise HTTPException(413, "PDF too large (max 20MB)")
-
     try:
         receipt = await pdf_parser.process_pdf(pdf_bytes)
     except Exception as e:
         raise HTTPException(500, f"PDF parsing failed: {e}")
-
     deduction = analyze_receipt(receipt)
     result = ReceiptWithDeduction(receipt=receipt, deduction=deduction)
-
     if save_to_db:
         try:
             payload = _build_payload(user_id, receipt, deduction)
@@ -95,7 +84,6 @@ async def upload_pdf(
                 await insert_receipt_items(db_row["id"], items_data)
         except Exception as e:
             print(f"[WARN] DB write failed: {e}")
-
     return result
 
 
@@ -113,10 +101,8 @@ async def upload_email(
         )
     except Exception as e:
         raise HTTPException(500, f"Email parsing failed: {e}")
-
     deduction = analyze_receipt(receipt)
     result = ReceiptWithDeduction(receipt=receipt, deduction=deduction)
-
     if save_to_db:
         try:
             payload = _build_payload(body.user_id, receipt, deduction)
@@ -126,7 +112,6 @@ async def upload_email(
                 await insert_receipt_items(db_row["id"], items_data)
         except Exception as e:
             print(f"[WARN] DB write failed: {e}")
-
     return result
 
 
@@ -147,7 +132,6 @@ async def manual_entry(
     )
     deduction = analyze_receipt(receipt)
     result = ReceiptWithDeduction(receipt=receipt, deduction=deduction)
-
     if save_to_db:
         try:
             payload = _build_payload(body.user_id, receipt, deduction)
@@ -157,5 +141,4 @@ async def manual_entry(
                 await insert_receipt_items(db_row["id"], items_data)
         except Exception as e:
             print(f"[WARN] DB write failed: {e}")
-
     return result
